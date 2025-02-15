@@ -1051,6 +1051,34 @@ AIOT_DEVICE_MAPPING = [
             }
         ],
     },
+    {
+        # 集悦妙控屏 S1 Plus
+        "lumi.switch.acn034": ["Aqara", "Magic Pad S1 Plus", ""],
+        "params": [
+            {
+                "sensor": {
+                    MK_INIT_PARAMS: {
+                        MK_HASS_NAME: "power",
+                        "device_class": SensorDeviceClass.POWER,
+                        "state_class": SensorStateClass.MEASUREMENT,
+                        "unit_of_measurement": UnitOfPower.WATT,
+                    },
+                    MK_RESOURCES: {"power": ("0.12.85", "_attr_native_value")},
+                }
+            },
+            {
+                "sensor": {
+                    MK_INIT_PARAMS: {
+                        MK_HASS_NAME: "energy",
+                        "device_class": SensorDeviceClass.ENERGY,
+                        "state_class": SensorStateClass.TOTAL_INCREASING,
+                        "unit_of_measurement": UnitOfEnergy.KILO_WATT_HOUR,
+                    },
+                    MK_RESOURCES: {"energy": ("0.13.85", "_attr_native_value")},
+                }
+            },
+        ],
+    },
     ##########################通断器、插座开关#######################################
     {
         # 单路控制器 T1（单火版）
