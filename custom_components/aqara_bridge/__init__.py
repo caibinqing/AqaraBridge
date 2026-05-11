@@ -3,6 +3,7 @@ from email import message
 import re
 import logging
 
+from homeassistant.const import EVENT_HOMEASSISTANT_STOP
 from homeassistant.core import HomeAssistant
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.helpers import aiohttp_client
@@ -104,6 +105,24 @@ async def async_setup_entry(hass, entry):
         manager._msg_handler.stop()
     await manager.start_msg_hanlder(
         data[CONF_ENTRY_APP_ID], data[CONF_ENTRY_APP_KEY], data[CONF_ENTRY_KEY_ID]
+    )
+
+    # Ensure the RocketMQ consumer is shut down when HA stops.
+    # Without this, the consumer's ~49 native worker threads outlive
+    # HA's main exit path and block the Python interpreter indefinitely,
+    # causing in-container restarts to hang forever and requiring a
+    # `docker compose restart` to recover.
+    async def _async_stop_consumer(event):
+        if manager._msg_handler is not None:
+            _LOGGER.info(
+                "AqaraBridge: stopping RocketMQ consumer on HA shutdown"
+            )
+            await manager._msg_handler.async_stop()
+
+    entry.async_on_unload(
+        hass.bus.async_listen_once(
+            EVENT_HOMEASSISTANT_STOP, _async_stop_consumer
+        )
     )
     aiotcloud.set_country(data.get(CONF_ENTRY_AUTH_COUNTRY_CODE))
     if (

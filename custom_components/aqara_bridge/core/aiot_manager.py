@@ -400,6 +400,27 @@ class AiotMessageHandler:
     def stop(self):
         self._consumer.shutdown()
 
+    async def async_stop(self):
+        """Asynchronously shut down the RocketMQ consumer.
+
+        `self._consumer.shutdown()` is a blocking C call into librocketmq.
+        Wrap it in a thread bounded by a timeout so HA's stop sequence
+        is not blocked indefinitely if the C library hangs draining
+        in-flight messages — without this, ~49 native worker threads
+        outlive HA's main loop and block the Python interpreter from
+        exiting (in-container restarts hang forever).
+        """
+        try:
+            await asyncio.wait_for(
+                asyncio.to_thread(self._consumer.shutdown),
+                timeout=5,
+            )
+        except asyncio.TimeoutError:
+            _LOGGER.warning(
+                "AqaraBridge: RocketMQ consumer.shutdown() did not "
+                "return within 5s; HA shutdown will continue"
+            )
+
 
 class AiotManager:
     # Aiot会话
