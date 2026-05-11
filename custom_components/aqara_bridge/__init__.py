@@ -102,7 +102,10 @@ async def async_setup_entry(hass, entry):
     aiotcloud.update_token_event_callback = token_updated
     if manager._msg_handler is not None:
         # 如果重新配置，重新启动mq
-        manager._msg_handler.stop()
+        # Use async_stop() (bounded, off-loop) to avoid blocking the
+        # event loop / hanging on librocketmq during reconfigure —
+        # same failure mode that motivated the HA-stop listener below.
+        await manager._msg_handler.async_stop()
     await manager.start_msg_hanlder(
         data[CONF_ENTRY_APP_ID], data[CONF_ENTRY_APP_KEY], data[CONF_ENTRY_KEY_ID]
     )
