@@ -45,11 +45,10 @@ class AiotEventEntity(AiotEntityBase, EventEntity):
         icon = kwargs.get("icon")
         if icon:
             self._attr_icon = icon
+        elif self._attr_device_class is None:
+            # 有device_class时交给HA按类型显示图标，例如门铃
+            self._attr_icon = "mdi:button-pointer"
         self._extra_state_attributes.extend(["trigger_time", "trigger_dt"])
-
-    @property
-    def icon(self):
-        return "mdi:button-pointer"
 
     async def async_update(self):
         # 事件只来自消息推送；初始查询会拿到上一次的值，重启时误触发一次事件
@@ -57,9 +56,15 @@ class AiotEventEntity(AiotEntityBase, EventEntity):
 
     def convert_res_to_attr(self, res_name, res_value):
         if res_name == "event":
-            trigger = self.event_mapping.get(res_value, "unknown")
-            self._trigger_event(trigger)
-            self.schedule_update_ha_state()
+            trigger = self.event_mapping.get(res_value)
+            if trigger is None:
+                # 不在event_types中的值会让_trigger_event抛ValueError
+                _LOGGER.info(
+                    "[event, {}]unmapped value: {}".format(self.device.did, res_value)
+                )
+            else:
+                self._trigger_event(trigger)
+                self.schedule_update_ha_state()
         return super().convert_res_to_attr(res_name, res_value)
 
 
