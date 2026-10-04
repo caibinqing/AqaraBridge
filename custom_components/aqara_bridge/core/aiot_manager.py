@@ -48,7 +48,7 @@ def __init_rocketmq():
 
 try:
     from rocketmq.client import PushConsumer, RecvMessage
-except:
+except Exception:  # 缺少 librocketmq.so 时的异常类型随 rocketmq 包版本不同
     __init_rocketmq()
     from rocketmq.client import PushConsumer, RecvMessage
 
