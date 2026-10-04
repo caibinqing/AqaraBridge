@@ -39,6 +39,8 @@ CONF_ENTRY_DEVICES = "devices"
 HASS_DATA_AUTH_ENTRY_ID = "auth_entry_id"
 HASS_DATA_AIOTCLOUD = "aiotcloud"
 HASS_DATA_AIOT_MANAGER = "aiot_manager"
+# 加载时除令牌外的配置快照，用于判断配置变化是否需要重载
+HASS_DATA_RELOAD_KEYS = "reload_keys"
 
 ATTR_FIRMWARE_VERSION = "firmware_version"
 ATTR_ZIGBEE_LQI = "zigbee_lqi"

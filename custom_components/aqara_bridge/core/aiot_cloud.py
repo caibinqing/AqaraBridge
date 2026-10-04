@@ -185,7 +185,7 @@ class AiotCloud:
             self.access_token = jo["result"]["accessToken"]
             self.refresh_token = jo["result"]["refreshToken"]
             if self.update_token_event_callback:
-                self.update_token_event_callback(self.access_token, self.refresh_token)
+                self.update_token_event_callback(jo["result"])
 
         return jo
 
@@ -200,7 +200,7 @@ class AiotCloud:
             self.access_token = jo["result"]["accessToken"]
             self.refresh_token = jo["result"]["refreshToken"]
             if self.update_token_event_callback:
-                self.update_token_event_callback(self.access_token, self.refresh_token)
+                self.update_token_event_callback(jo["result"])
         else:
             _LOGGER.error(
                 f"Call Aiot api refresh token failed，request:{refresh_token},return:{jo}"

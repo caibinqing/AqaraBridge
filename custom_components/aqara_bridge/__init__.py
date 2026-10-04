@@ -2,11 +2,12 @@ import datetime
 import logging
 import re
 
-from homeassistant.config_entries import ConfigEntry
+from homeassistant.config_entries import ConfigEntry, ConfigEntryState
 from homeassistant.const import EVENT_HOMEASSISTANT_STOP
-from homeassistant.core import HomeAssistant
+from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers import aiohttp_client
 from homeassistant.helpers import device_registry as dr
+from homeassistant.helpers.event import async_track_time_interval
 
 from .core.aiot_cloud import AiotCloud
 from .core.aiot_manager import AiotManager
@@ -27,6 +28,7 @@ from .core.const import (
     HASS_DATA_AIOT_MANAGER,
     HASS_DATA_AIOTCLOUD,
     HASS_DATA_AUTH_ENTRY_ID,
+    HASS_DATA_RELOAD_KEYS,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -40,6 +42,37 @@ def data_masking(s: str, n: int) -> str:
     return re.sub(f"(?<=.{{{n}}}).(?=.{{{n}}})", "*", str(s))
 
 
+EXPIRES_TIME_FORMAT = "%Y-%m-%d %H:%M:%S"
+# 令牌最长有效30天，剩余不足3天时主动刷新
+TOKEN_REFRESH_MARGIN = datetime.timedelta(days=3)
+TOKEN_CHECK_INTERVAL = datetime.timedelta(hours=12)
+# 只有这些字段变化时不需要重载集成
+TOKEN_FIELDS = (
+    CONF_ENTRY_AUTH_OPENID,
+    CONF_ENTRY_AUTH_ACCESS_TOKEN,
+    CONF_ENTRY_AUTH_REFRESH_TOKEN,
+    CONF_ENTRY_AUTH_EXPIRES_IN,
+    CONF_ENTRY_AUTH_EXPIRES_TIME,
+)
+
+
+def apply_token_result(data: dict, token_result: dict) -> dict:
+    """把获取/刷新令牌的结果合并到配置数据中"""
+    data = {
+        **data,
+        CONF_ENTRY_AUTH_ACCESS_TOKEN: token_result["accessToken"],
+        CONF_ENTRY_AUTH_REFRESH_TOKEN: token_result["refreshToken"],
+        CONF_ENTRY_AUTH_EXPIRES_IN: token_result["expiresIn"],
+        CONF_ENTRY_AUTH_EXPIRES_TIME: (
+            datetime.datetime.now()
+            + datetime.timedelta(seconds=int(token_result["expiresIn"]))
+        ).strftime(EXPIRES_TIME_FORMAT),
+    }
+    if "openId" in token_result:
+        data[CONF_ENTRY_AUTH_OPENID] = token_result["openId"]
+    return data
+
+
 def gen_auth_entry(
     app_id: str,
     app_key: str,
@@ -49,22 +82,35 @@ def gen_auth_entry(
     country_code: str,
     token_result: dict,
 ):
-    auth_entry = {}
-    auth_entry[CONF_ENTRY_APP_ID] = app_id
-    auth_entry[CONF_ENTRY_APP_KEY] = app_key
-    auth_entry[CONF_ENTRY_KEY_ID] = key_id
-    auth_entry[CONF_ENTRY_AUTH_ACCOUNT] = account
-    auth_entry[CONF_ENTRY_AUTH_ACCOUNT_TYPE] = account_type
-    auth_entry[CONF_ENTRY_AUTH_COUNTRY_CODE] = country_code
-    auth_entry[CONF_ENTRY_AUTH_OPENID] = token_result["openId"]
-    auth_entry[CONF_ENTRY_AUTH_ACCESS_TOKEN] = token_result["accessToken"]
-    auth_entry[CONF_ENTRY_AUTH_EXPIRES_IN] = token_result["expiresIn"]
-    auth_entry[CONF_ENTRY_AUTH_EXPIRES_TIME] = (
-        datetime.datetime.now()
-        + datetime.timedelta(seconds=int(token_result["expiresIn"]))
-    ).strftime("%Y-%m-%d %H:%M:%S")
-    auth_entry[CONF_ENTRY_AUTH_REFRESH_TOKEN] = token_result["refreshToken"]
-    return auth_entry
+    auth_entry = {
+        CONF_ENTRY_APP_ID: app_id,
+        CONF_ENTRY_APP_KEY: app_key,
+        CONF_ENTRY_KEY_ID: key_id,
+        CONF_ENTRY_AUTH_ACCOUNT: account,
+        CONF_ENTRY_AUTH_ACCOUNT_TYPE: account_type,
+        CONF_ENTRY_AUTH_COUNTRY_CODE: country_code,
+    }
+    return apply_token_result(auth_entry, token_result)
+
+
+def reload_key(entry: ConfigEntry) -> tuple[dict, dict]:
+    """除令牌外的配置，变化时才需要重载"""
+    data = {k: v for k, v in entry.data.items() if k not in TOKEN_FIELDS}
+    return data, dict(entry.options)
+
+
+async def async_ensure_token_fresh(aiotcloud: AiotCloud, expires_time: str) -> bool:
+    """令牌即将过期时刷新，返回当前是否有可用的令牌"""
+    expires_at = datetime.datetime.strptime(expires_time, EXPIRES_TIME_FORMAT)
+    now = datetime.datetime.now()
+    if expires_at - now > TOKEN_REFRESH_MARGIN:
+        return True
+    resp = await aiotcloud.async_refresh_token(aiotcloud.refresh_token)
+    if isinstance(resp, dict) and resp.get("code") == 0:
+        # 新令牌已由 update_token_event_callback 写回配置
+        return True
+    # 刷新失败但令牌尚未过期，继续使用，下次检查再试
+    return expires_at > now
 
 
 def init_hass_data(hass):
@@ -84,17 +130,18 @@ async def async_setup(hass, config):
 
 
 async def async_setup_entry(hass, entry):
-    def token_updated(access_token, refresh_token):
-        auth_entry = hass.data[DOMAIN][HASS_DATA_AUTH_ENTRY_ID]
-        if auth_entry:
-            data = auth_entry.data.copy()
-            data[CONF_ENTRY_AUTH_ACCESS_TOKEN] = access_token
-            data[CONF_ENTRY_AUTH_REFRESH_TOKEN] = refresh_token
-            hass.config_entries.async_update_entry(entry, data=data)
+    @callback
+    def token_updated(token_result: dict):
+        hass.config_entries.async_update_entry(
+            entry, data=apply_token_result(entry.data, token_result)
+        )
 
     # add update handler
     if not entry.update_listeners:
         entry.add_update_listener(async_update_options)
+    # 在可能刷新令牌之前记下，刷新令牌引起的配置更新不会触发重载
+    reload_keys = hass.data[DOMAIN].setdefault(HASS_DATA_RELOAD_KEYS, {})
+    reload_keys[entry.entry_id] = reload_key(entry)
 
     data = entry.data.copy()
     if _DEBUG_STATUS:
@@ -141,32 +188,24 @@ async def async_setup_entry(hass, entry):
         )
     )
     aiotcloud.set_country(data.get(CONF_ENTRY_AUTH_COUNTRY_CODE))
-    if (
-        datetime.datetime.strptime(
-            data.get(CONF_ENTRY_AUTH_EXPIRES_TIME), "%Y-%m-%d %H:%M:%S"
-        )
-        <= datetime.datetime.now()
+    aiotcloud.access_token = data.get(CONF_ENTRY_AUTH_ACCESS_TOKEN)
+    aiotcloud.refresh_token = data.get(CONF_ENTRY_AUTH_REFRESH_TOKEN)
+    if not await async_ensure_token_fresh(
+        aiotcloud, data[CONF_ENTRY_AUTH_EXPIRES_TIME]
     ):
-        resp = await aiotcloud.async_refresh_token(
-            data.get(CONF_ENTRY_AUTH_REFRESH_TOKEN)
+        # TODO 这里需要处理刷新令牌失败的情况
+        reload_keys.pop(entry.entry_id, None)
+        return False
+
+    # HA长时间运行时也定期检查，避免令牌过期后无法刷新
+    async def _async_check_token(now):
+        await async_ensure_token_fresh(
+            aiotcloud, entry.data[CONF_ENTRY_AUTH_EXPIRES_TIME]
         )
-        if isinstance(resp, dict) and resp.get("code") == 0:
-            auth_entry = gen_auth_entry(
-                data[CONF_ENTRY_APP_ID],
-                data[CONF_ENTRY_APP_KEY],
-                data[CONF_ENTRY_KEY_ID],
-                data.get(CONF_ENTRY_AUTH_ACCOUNT),
-                data.get(CONF_ENTRY_AUTH_ACCOUNT_TYPE),
-                data.get(CONF_ENTRY_AUTH_COUNTRY_CODE),
-                resp["result"],
-            )
-            hass.config_entries.async_update_entry(entry, data=auth_entry)
-        else:
-            # TODO 这里需要处理刷新令牌失败的情况
-            return False
-    else:
-        aiotcloud.access_token = data.get(CONF_ENTRY_AUTH_ACCESS_TOKEN)
-        aiotcloud.refresh_token = data.get(CONF_ENTRY_AUTH_REFRESH_TOKEN)
+
+    entry.async_on_unload(
+        async_track_time_interval(hass, _async_check_token, TOKEN_CHECK_INTERVAL)
+    )
 
     hass.data[DOMAIN][HASS_DATA_AUTH_ENTRY_ID] = entry
 
@@ -187,6 +226,8 @@ async def async_setup_entry(hass, entry):
 
 
 async def async_unload_entry(hass, entry):
+    hass.data[DOMAIN].get(HASS_DATA_RELOAD_KEYS, {}).pop(entry.entry_id, None)
+    hass.data[DOMAIN][HASS_DATA_AIOTCLOUD].update_token_event_callback = None
     manager: AiotManager = hass.data[DOMAIN][HASS_DATA_AIOT_MANAGER]
     unload_ok = await manager.async_unload_entry(entry)
     if manager._msg_handler is not None:
@@ -206,6 +247,16 @@ async def async_remove_entry(hass, entry):
 
 async def async_update_options(hass: HomeAssistant, entry: ConfigEntry):
     """Update Optioins if available"""
+    reload_keys = hass.data[DOMAIN].get(HASS_DATA_RELOAD_KEYS, {})
+    if entry.state in (
+        ConfigEntryState.LOADED,
+        ConfigEntryState.SETUP_IN_PROGRESS,
+    ) and reload_keys.get(entry.entry_id) == reload_key(entry):
+        # 只有令牌变了（刷新或重新授权），同步到会话即可，不重载
+        aiotcloud: AiotCloud = hass.data[DOMAIN][HASS_DATA_AIOTCLOUD]
+        aiotcloud.access_token = entry.data.get(CONF_ENTRY_AUTH_ACCESS_TOKEN)
+        aiotcloud.refresh_token = entry.data.get(CONF_ENTRY_AUTH_REFRESH_TOKEN)
+        return
     await hass.config_entries.async_reload(entry.entry_id)
 
 
