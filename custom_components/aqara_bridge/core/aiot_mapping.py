@@ -34,6 +34,7 @@ from .const import (
     HUMAN_MAPPING,
     MOVING_MAPPING,
     SOUND_MAPPING,
+    DOORBELL_MAPPING,
     KN_BUTTON_MAPPING,
     KN_BUTTON_3_MAPPING,
     KN_SLIDE_MAPPING,
@@ -189,6 +190,22 @@ AIOT_DEVICE_MAPPING = [
                     MK_RESOURCES: {
                         "detect_sound_event": ("3.22.85", "_attr_native_value"),
                     },
+                }
+            },
+        ],
+    },
+    {
+        "lumi.camera.acn005": ["Aqara", "DoorBell G4", ""],
+        "params": [
+            {
+                "event": {
+                    MK_INIT_PARAMS: {
+                        MK_HASS_NAME: "default",
+                        "event_mapping": DOORBELL_MAPPING,
+                        "device_class": EventDeviceClass.DOORBELL,
+                        "entity_name": "门铃",
+                    },
+                    MK_RESOURCES: {"event": ("13.12.85", "_attr_trigger")},
                 }
             },
         ],
@@ -2713,10 +2730,5 @@ AIOT_DEVICE_MAPPING = [
                 }
             },
         ],
-    },
-    ##################################不支持的设备##################################
-    {
-        "lumi.camera.acn005": ["Aqara", "DoorBell G4", ""],
-        "params": [],
     },
 ]

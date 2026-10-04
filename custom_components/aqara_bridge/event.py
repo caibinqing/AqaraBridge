@@ -51,6 +51,10 @@ class AiotEventEntity(AiotEntityBase, EventEntity):
     def icon(self):
         return "mdi:button-pointer"
 
+    async def async_update(self):
+        # 事件只来自消息推送；初始查询会拿到上一次的值，重启时误触发一次事件
+        return
+
     def convert_res_to_attr(self, res_name, res_value):
         if res_name == "event":
             trigger = self.event_mapping.get(res_value, "unknown")

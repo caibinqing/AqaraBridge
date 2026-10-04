@@ -125,6 +125,7 @@ PET_MAPPING = {"1": "猫", "2": "狗", "3": "猫狗"}
 HUMAN_MAPPING = {"0": "无人", "1": "有人"}
 MOVING_MAPPING = {"0": "未侦测到移动", "1": "侦测到移动"}
 SOUND_MAPPING = {"0": "无异常声音", "1": "有异常声音"}
+DOORBELL_MAPPING = {"1": "ring"}
 
 # 卡农开关
 KN_BUTTON_MAPPING = {"1": "single", "2": "double", "3": "hold"}
