@@ -21,29 +21,46 @@ from .utils import local_zone, ts_format_str_ms
 _LOGGER = logging.getLogger(__name__)
 
 
+# platform.machine() -> 3rd_libs 下自带的 librocketmq.so 目录
+ROCKETMQ_LIB_DIRS = {
+    "x86_64": "x86_64",
+    "amd64": "x86_64",
+    "aarch64": "arm64",
+    "arm64": "arm64",
+}
+
+
 def __init_rocketmq():
+    """把集成自带的 librocketmq.so 复制到系统库目录，供 rocketmq 包加载"""
     import os
     import platform
+    import shutil
 
     machine = platform.machine()
-    if machine in ("aarch64", "aarch64_be", "armv8b", "armv8l"):
-        machine = "arm64"
-
-    fp = "{}/custom_components/aqara_bridge/3rd_libs/{}/librocketmq.so".format(
-        os.path.abspath("."),
-        machine,
+    lib_dir = ROCKETMQ_LIB_DIRS.get(machine.lower())
+    fp = os.path.join(
+        os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+        "3rd_libs",
+        lib_dir or machine,
+        "librocketmq.so",
     )
-    if platform.system() != "Linux" or not os.path.exists(fp):
+    if platform.system() != "Linux" or lib_dir is None or not os.path.exists(fp):
         _LOGGER.error(
-            f"AqaraBridge need rocketmq, you need install it. Not Fund librocketmq from {fp}."
+            "AqaraBridge needs librocketmq, but no bundled library for %s %s: %s",
+            platform.system(),
+            machine,
+            fp,
         )
         return
     target_p = "/usr/local/lib/librocketmq.so"
-    if not os.path.exists(target_p):
-        import shutil
-
-        _LOGGER.info(f"Copy librocketmq from {fp} to {target_p}")
+    if os.path.exists(target_p):
+        return
+    try:
         shutil.copyfile(fp, target_p)
+    except OSError as err:
+        _LOGGER.error("Failed to copy %s to %s: %s", fp, target_p, err)
+        return
+    _LOGGER.info("Copied librocketmq from %s to %s", fp, target_p)
 
 
 try:
