@@ -202,9 +202,8 @@ class AiotCloud:
             if self.update_token_event_callback:
                 self.update_token_event_callback(jo["result"])
         else:
-            _LOGGER.error(
-                f"Call Aiot api refresh token failed，request:{refresh_token},return:{jo}"
-            )
+            # 不记录 refresh token
+            _LOGGER.error("Call Aiot api refresh token failed，return:%s", jo)
         return jo
 
     async def async_query_device_bind_key(self, did: str):

@@ -401,8 +401,11 @@ class AiotMessageHandler:
         self._consumer.subscribe(self._app_id, consumer_callback)
         await asyncio.to_thread(self._consumer.start)
         # self._consumer.start()
+        # 不记录 app_key
         _LOGGER.info(
-            f"start_message_customer ---> server:{self._server}, key_id:{self._app_id}, app_key:{self._app_key} <---"
+            "start_message_customer ---> server:%s, app_id:%s <---",
+            self._server,
+            self._app_id,
         )
 
     def stop(self):
