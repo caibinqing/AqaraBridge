@@ -181,7 +181,7 @@ class AiotCloud:
             account=account,
             accountType=account_type,
         )
-        if jo["code"] == 0:
+        if jo and jo["code"] == 0:
             self.access_token = jo["result"]["accessToken"]
             self.refresh_token = jo["result"]["refreshToken"]
             if self.update_token_event_callback:
@@ -196,7 +196,7 @@ class AiotCloud:
             only_result=False,
             refreshToken=refresh_token,
         )
-        if jo["code"] == 0:
+        if jo and jo["code"] == 0:
             self.access_token = jo["result"]["accessToken"]
             self.refresh_token = jo["result"]["refreshToken"]
             if self.update_token_event_callback:

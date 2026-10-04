@@ -9,8 +9,10 @@ from homeassistant.config_entries import (
     ConfigEntry,
 )
 from homeassistant.core import callback
+from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
 from . import init_hass_data, data_masking, gen_auth_entry
+from .core.aiot_cloud import AiotCloud
 from .core.aiot_manager import AiotDevice
 from .core.const import *
 
@@ -89,7 +91,7 @@ class AqaraBridgeFlowHandler(ConfigFlow, domain=DOMAIN):
             refresh_token = user_input.get(CONF_FIELD_REFRESH_TOKEN)
             if refresh_token and refresh_token != "":
                 resp = await self._session.async_refresh_token(refresh_token)
-                if resp["code"] == 0:
+                if resp and resp["code"] == 0:
                     self._auth_entry = gen_auth_entry(
                         self.app_id,
                         self.app_key,
@@ -104,7 +106,7 @@ class AqaraBridgeFlowHandler(ConfigFlow, domain=DOMAIN):
                     errors["base"] = "refresh_token_error"
             else:
                 resp = await self._session.async_get_auth_code(self.account, 0)
-                if resp["code"] == 0:
+                if resp and resp["code"] == 0:
                     return await self.async_step_get_token()
                 else:
                     errors["base"] = "auth_code_error"
@@ -157,7 +159,7 @@ class AqaraBridgeFlowHandler(ConfigFlow, domain=DOMAIN):
         if user_input and CONF_FIELD_AUTH_CODE in user_input:
             auth_code = user_input.get(CONF_FIELD_AUTH_CODE)
             resp = await self._session.async_get_token(auth_code, self.account, 0)
-            if resp["code"] == 0:
+            if resp and resp["code"] == 0:
                 self._auth_entry = gen_auth_entry(
                     self.app_id,
                     self.app_key,
@@ -253,7 +255,8 @@ class OptionsFlowHandler(OptionsFlow):
             self.account = user_input.get(CONF_FIELD_ACCOUNT)
             self.country_code = user_input.get(CONF_FIELD_COUNTRY_CODE)
             if self._session is None:
-                self._session = self.hass.data[DOMAIN][HASS_DATA_AIOTCLOUD]
+                # 用独立会话，填错或中途放弃不影响运行中的集成；授权成功后会重载
+                self._session = AiotCloud(async_get_clientsession(self.hass))
             self._session.set_country(self.country_code)
             self._session.set_app_id(user_input.get(CONF_FIELD_APP_ID))
             self._session.set_app_key(user_input.get(CONF_FIELD_APP_KEY))
@@ -263,7 +266,7 @@ class OptionsFlowHandler(OptionsFlow):
             if refresh_token and refresh_token != "":
                 # 更新了token值
                 resp = await self._session.async_refresh_token(refresh_token)
-                if resp["code"] == 0:
+                if resp and resp["code"] == 0:
                     auth_entry = gen_auth_entry(
                         self._session.get_app_id(),
                         self._session.get_app_key(),
@@ -281,52 +284,63 @@ class OptionsFlowHandler(OptionsFlow):
                     errors["base"] = "refresh_token_error"
             else:
                 resp = await self._session.async_get_auth_code(self.account, 0)
-                if resp["code"] == 0:
+                if resp and resp["code"] == 0:
                     return await self.async_step_option_get_token()
                 else:
                     errors["base"] = "auth_code_error"
-        else:
-            prev_input = {
-                **self.config_entry.data,
-                **self.config_entry.options,
+
+        prev_input = {
+            **self.config_entry.data,
+            **self.config_entry.options,
+        }
+        defaults = {
+            CONF_FIELD_ACCOUNT: prev_input.get(CONF_ENTRY_AUTH_ACCOUNT),
+            CONF_FIELD_COUNTRY_CODE: prev_input.get(
+                CONF_ENTRY_AUTH_COUNTRY_CODE, SERVER_COUNTRY_CODES_DEFAULT
+            ),
+            CONF_FIELD_APP_ID: prev_input.get(CONF_ENTRY_APP_ID),
+            CONF_FIELD_APP_KEY: prev_input.get(CONF_ENTRY_APP_KEY),
+            CONF_FIELD_KEY_ID: prev_input.get(CONF_ENTRY_KEY_ID),
+        }
+        # 出错重新显示表单时，保留刚才填写的内容
+        if user_input:
+            defaults.update(
+                {k: v for k, v in user_input.items() if k != CONF_FIELD_REFRESH_TOKEN}
+            )
+
+        def default(key):
+            return defaults.get(key) or vol.UNDEFINED
+
+        config_scheme = vol.Schema(
+            {
+                vol.Required(
+                    CONF_FIELD_ACCOUNT, default=default(CONF_FIELD_ACCOUNT)
+                ): str,
+                vol.Required(
+                    CONF_FIELD_COUNTRY_CODE, default=default(CONF_FIELD_COUNTRY_CODE)
+                ): vol.In(SERVER_COUNTRY_CODES),
+                vol.Optional(
+                    CONF_FIELD_APP_ID, default=default(CONF_FIELD_APP_ID)
+                ): str,
+                vol.Optional(
+                    CONF_FIELD_APP_KEY, default=default(CONF_FIELD_APP_KEY)
+                ): str,
+                vol.Optional(
+                    CONF_FIELD_KEY_ID, default=default(CONF_FIELD_KEY_ID)
+                ): str,
+                vol.Optional(CONF_FIELD_REFRESH_TOKEN): str,
             }
-            config_scheme = vol.Schema(
-                {
-                    vol.Required(
-                        CONF_FIELD_ACCOUNT,
-                        default=prev_input.get(CONF_ENTRY_AUTH_ACCOUNT, vol.UNDEFINED),
-                    ): str,
-                    vol.Required(
-                        CONF_FIELD_COUNTRY_CODE,
-                        default=prev_input.get(
-                            CONF_ENTRY_AUTH_COUNTRY_CODE, SERVER_COUNTRY_CODES_DEFAULT
-                        ),
-                    ): vol.In(SERVER_COUNTRY_CODES),
-                    vol.Optional(
-                        CONF_FIELD_APP_ID,
-                        default=prev_input.get(CONF_ENTRY_APP_ID, vol.UNDEFINED),
-                    ): str,
-                    vol.Optional(
-                        CONF_FIELD_APP_KEY,
-                        default=prev_input.get(CONF_ENTRY_APP_KEY, vol.UNDEFINED),
-                    ): str,
-                    vol.Optional(
-                        CONF_FIELD_KEY_ID,
-                        default=prev_input.get(CONF_ENTRY_KEY_ID, vol.UNDEFINED),
-                    ): str,
-                    vol.Optional(CONF_FIELD_REFRESH_TOKEN): str,
-                }
-            )
-            return self.async_show_form(
-                step_id="auth", data_schema=config_scheme, errors=errors
-            )
+        )
+        return self.async_show_form(
+            step_id="auth", data_schema=config_scheme, errors=errors
+        )
 
     async def async_step_option_get_token(self, user_input=None):
         errors = {}
         if user_input and CONF_FIELD_AUTH_CODE in user_input:
             auth_code = user_input.get(CONF_FIELD_AUTH_CODE)
             resp = await self._session.async_get_token(auth_code, self.account, 0)
-            if resp["code"] == 0:
+            if resp and resp["code"] == 0:
                 auth_entry = gen_auth_entry(
                     self._session.get_app_id(),
                     self._session.get_app_key(),
