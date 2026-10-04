@@ -2,17 +2,21 @@
 
 基于Aqara开放平台，通过云端api进行设备控制以及订阅
 
-[![version](https://img.shields.io/github/manifest-json/v/bernard3378/AqaraBridge?filename=custom_components%2Faqara_bridge%2Fmanifest.json)](https://github.com/bernard3378/AqaraBridge/releases/latest) [![stars](https://img.shields.io/github/stars/bernard3378/AqaraBridge)](https://github.com/bernard3378/AqaraBridge/stargazers) [![issues](https://img.shields.io/github/issues/bernard3378/AqaraBridge)](https://github.com/bernard3378/AqaraBridge/issues) [![hacs](https://img.shields.io/badge/HACS-Default-orange.svg)](https://hacs.xyz)
+[![version](https://img.shields.io/github/manifest-json/v/caibinqing/AqaraBridge?filename=custom_components%2Faqara_bridge%2Fmanifest.json)](https://github.com/caibinqing/AqaraBridge/releases/latest) [![stars](https://img.shields.io/github/stars/caibinqing/AqaraBridge)](https://github.com/caibinqing/AqaraBridge/stargazers) [![issues](https://img.shields.io/github/issues/caibinqing/AqaraBridge)](https://github.com/caibinqing/AqaraBridge/issues) [![hacs](https://img.shields.io/badge/HACS-Custom-orange.svg)](https://hacs.xyz)
+
+本仓库 fork 自 [bernard3378/AqaraBridge](https://github.com/bernard3378/AqaraBridge)（更早源自 [meishild](https://github.com/meishild/AqaraBridge)、[niceboygithub](https://github.com/niceboygithub/AqaraBridge) 与 [Aqara 官方](https://github.com/aqara/home-assistant)）。
+
+需要 Home Assistant 2026.7.0 及以上版本。
 
 ## 一键添加到HACS
-[![Open your Home Assistant instance and open a repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=bernard3378&repository=AqaraBridge&category=integration)
+[![Open your Home Assistant instance and open a repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=caibinqing&repository=AqaraBridge&category=integration)
 ## 需要开发者账号支持
 
 申请AqaraIOT开发者：[Aqara IoT Cloud](https://developer.aqara.com/register).
 
 * 提示：如果在安装过程中出现此集成不支持通过UI配置，大概率是因为rocketmq的链接库不存在，当前版本仅自动集成了x86和arm64。
 * [V2.1.1]已加入更多架构支持，如果还出现类似问题请复制日志信息提Issue
-* 当前支持通过hacs商店进行配置，自定义存储库URL: bernard3378/AqaraBridge
+* 当前支持通过hacs商店进行配置，自定义存储库URL: caibinqing/AqaraBridge
 
 重点提示：
 * 需要自己申请aqara的开发者账号。
@@ -22,7 +26,31 @@
 * 消息查看：如果需要确认消息可以将这个插件的日志级别改成info可以查看对应消息情况。
 
 ## 版本修订
-当前版本 V2.1.2 常规更新，为当前最稳定版本
+当前版本 V2.2.0
+
+V2.2.0
+* 需要 Home Assistant 2026.7.0 及以上版本
+* 添加集成时选择要接入的设备，之后可在“选项 → 选择接入的设备”中修改；未选中的设备不查询、不订阅，取消勾选的设备会被取消订阅并从 HA 中移除
+* 只订阅已接入实体用到的资源（开放平台的调用量包含消息推送，按需订阅可节省额度）
+* 令牌有效期改为 30 天，剩余不足 3 天时自动刷新，刷新令牌不再重载集成
+* 选项改为菜单：选择接入的设备 / 重新授权
+* 按集成自身位置查找自带的 librocketmq，不再依赖 HA 的工作目录
+* 只为能加载自带库的架构（x86_64、aarch64）复制 librocketmq，复制失败时记录错误而不是导致集成加载失败
+* 修复令牌过期后重启无法加载集成
+* 修复 HA 重启时卡住（关闭 RocketMQ 消费者，来自 [geofffranks](https://github.com/geofffranks) 的 PR #33）
+* 修复修改选项后重载不生效
+* 修复 HA 重启时事件实体误触发一次事件（如门铃响铃）
+* 修复重新授权表单出错时报错、填错凭据会影响运行中的集成
+* 修复红外遥控发送命令阻塞 HA、红外学习不可用
+* 修复事件实体图标被固定为按键图标、收到未知值时报错
+* 修复实体 ID 域名错误的警告，以及 CONCENTRATION_PARTS_PER_BILLION 弃用警告
+* 日志中不再输出 app_key 和刷新令牌
+* 代码质量：展开星号导入、清理无用导入等
+
+- 添加设备：
+- - lumi.camera.acn005 - 智能可视门铃 G4（门铃响铃、人脸识别事件；开放平台未开放电量与视频）
+- - lumi.switch.acn034 - 集悦妙控屏 S1 Plus（功率、用电量）
+
 
 V2.1.2
 * 优化初始化向导提示
@@ -202,5 +230,5 @@ V1.0.1
 V1.0.0
 
 还有我只支持了大部分我有的设备和类似的组件，如果发现有不支持的懂python的修改：
-[custom_components/aqara_bridge/core/aiot_mapping.py](https://github.com/meishild/AqaraBridge/blob/master/custom_components/aqara_bridge/core/aiot_mapping.py)
+[custom_components/aqara_bridge/core/aiot_mapping.py](https://github.com/caibinqing/AqaraBridge/blob/master/custom_components/aqara_bridge/core/aiot_mapping.py)
 

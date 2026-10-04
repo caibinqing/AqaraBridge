@@ -3,6 +3,6 @@
     "render_readme": true,
     "domain": "aqara_bridge",
     "homeassistant": "2026.7.0",
-    "documentation": "https://github.com/bernard3378/AqaraBridge",
-    "issue_tracker": "https://github.com/bernard3378/AqaraBridge/issues"
+    "documentation": "https://github.com/caibinqing/AqaraBridge",
+    "issue_tracker": "https://github.com/caibinqing/AqaraBridge/issues"
 }
