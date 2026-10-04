@@ -45,6 +45,20 @@
         },
         "step": {
             "init": {
+                "title": "选项",
+                "menu_options": {
+                    "select_devices": "选择接入的设备",
+                    "auth": "重新授权"
+                }
+            },
+            "select_devices": {
+                "data": {
+                    "field_selected_devices": "接入的设备"
+                },
+                "description": "只列出插件支持的设备。取消勾选的设备会被取消订阅，并从 Home Assistant 中移除。",
+                "title": "选择设备"
+            },
+            "auth": {
                 "data": {
                     "field_country_code": "云服务国家/地区",
                     "field_account": "Aqara Home账号（手机号/邮箱）",
@@ -66,7 +80,8 @@
         },
         "error": {
             "refresh_token_error": "刷新令牌错误，无法使用。",
-            "auth_code_error": "短信验证码错误，请重新输入。"
+            "auth_code_error": "短信验证码错误，请重新输入。",
+            "no_device_selected": "请至少选择一个设备。"
         }
     }
 }

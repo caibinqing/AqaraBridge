@@ -446,6 +446,8 @@ class AiotManager:
         self._session = session
         self._msg_handler = None
         self._options = None
+        # 配置对象已加载的平台，卸载时使用
+        self._entries_platforms: dict[str, set[str]] = {}
 
     @property
     def session(self) -> AiotCloud:
@@ -588,11 +590,39 @@ class AiotManager:
                 for i in range(len(self._managed_devices[x].platforms)):
                     platforms.extend(self._managed_devices[x].platforms[i].keys())
 
-        self._hass.async_create_task(
-            self._hass.config_entries.async_forward_entry_setups(
-                config_entry, set(platforms)
-            )
+        self._entries_platforms[config_entry.entry_id] = set(platforms)
+        await self._hass.config_entries.async_forward_entry_setups(
+            config_entry, set(platforms)
         )
+
+    async def async_unload_entry(self, config_entry: ConfigEntry) -> bool:
+        """卸载平台并清理配置对象相关的设备和实体"""
+        platforms = self._entries_platforms.pop(config_entry.entry_id, set())
+        unload_ok = await self._hass.config_entries.async_unload_platforms(
+            config_entry, platforms
+        )
+        self._config_entries.pop(config_entry.entry_id, None)
+        for did in self._entries_devices.pop(config_entry.entry_id, []):
+            self._managed_devices.pop(did, None)
+            self._devices_entities.pop(did, None)
+        return unload_ok
+
+    @property
+    def managed_device_ids(self) -> list[str]:
+        return list(self._managed_devices.keys())
+
+    async def async_unsubscribe_devices(self, dids: list[str]):
+        """取消订阅设备的资源，不再接入的设备停止推送"""
+        for did in dids:
+            resource_ids = sorted(
+                {
+                    r
+                    for e in self._devices_entities.get(did, [])
+                    for r in e.supported_resources
+                }
+            )
+            if resource_ids:
+                await self._session.async_unsubscribe_resources(did, resource_ids)
 
     async def async_add_entities(
         self, config_entry: ConfigEntry, entity_type: str, cls_list, async_add_entities

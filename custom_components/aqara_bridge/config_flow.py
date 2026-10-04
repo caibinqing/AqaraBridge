@@ -19,6 +19,26 @@ _LOGGER = logging.getLogger(__name__)
 DEVICE_GET_TOKEN_CONFIG = vol.Schema({vol.Required(CONF_FIELD_AUTH_CODE): str})
 
 
+async def async_query_supported_devices(session) -> dict[str, str]:
+    """查询账号下插件支持的设备，返回 {did: 显示名称}"""
+    results = await session.async_query_all_devices_info()
+    return {
+        x["did"]: f"{x.get('deviceName')} ({x.get('model')})"
+        for x in results
+        if AiotDevice(**x).is_supported
+    }
+
+
+def select_devices_schema(devices: dict[str, str], default=vol.UNDEFINED):
+    return vol.Schema(
+        {
+            vol.Required(CONF_FIELD_SELECTED_DEVICES, default=default): (
+                cv.multi_select(devices)
+            )
+        }
+    )
+
+
 class AqaraBridgeFlowHandler(ConfigFlow, domain=DOMAIN):
     """Handle an Aqara Bridge config flow."""
 
@@ -168,22 +188,11 @@ class AqaraBridgeFlowHandler(ConfigFlow, domain=DOMAIN):
             errors["base"] = "no_device_selected"
 
         if self._devices is None:
-            results = await self._session.async_query_all_devices_info()
-            self._devices = {
-                x["did"]: f"{x.get('deviceName')} ({x.get('model')})"
-                for x in results
-                if AiotDevice(**x).is_supported
-            }
+            self._devices = await async_query_supported_devices(self._session)
 
         return self.async_show_form(
             step_id="select_devices",
-            data_schema=vol.Schema(
-                {
-                    vol.Required(CONF_FIELD_SELECTED_DEVICES): cv.multi_select(
-                        self._devices
-                    )
-                }
-            ),
+            data_schema=select_devices_schema(self._devices),
             errors=errors,
         )
 
@@ -195,8 +204,48 @@ class OptionsFlowHandler(OptionsFlow):
         self.country_code = None
         self.account_type = 0
         self._session = None
+        self._devices = None
 
     async def async_step_init(self, user_input=None):
+        return self.async_show_menu(
+            step_id="init", menu_options=["select_devices", "auth"]
+        )
+
+    async def async_step_select_devices(self, user_input=None):
+        """重新选择接入的设备"""
+        errors = {}
+        manager = self.hass.data[DOMAIN][HASS_DATA_AIOT_MANAGER]
+        # 旧配置没有设备选项，此时接入的是所有支持的设备
+        current = (
+            self.config_entry.options.get(CONF_ENTRY_DEVICES)
+            or manager.managed_device_ids
+        )
+        if user_input is not None:
+            selected = user_input.get(CONF_FIELD_SELECTED_DEVICES, [])
+            if selected:
+                await manager.async_unsubscribe_devices(
+                    [x for x in current if x not in selected]
+                )
+                return self.async_create_entry(
+                    title="",
+                    data={**self.config_entry.options, CONF_ENTRY_DEVICES: selected},
+                )
+            errors["base"] = "no_device_selected"
+
+        if self._devices is None:
+            self._devices = await async_query_supported_devices(
+                self.hass.data[DOMAIN][HASS_DATA_AIOTCLOUD]
+            )
+
+        return self.async_show_form(
+            step_id="select_devices",
+            data_schema=select_devices_schema(
+                self._devices, [x for x in current if x in self._devices]
+            ),
+            errors=errors,
+        )
+
+    async def async_step_auth(self, user_input=None):
         """Configure an aqara device through the Aqara Cloud."""
         errors = {}
         if isinstance(user_input, dict):
@@ -250,7 +299,7 @@ class OptionsFlowHandler(OptionsFlow):
                     vol.Required(
                         CONF_FIELD_COUNTRY_CODE,
                         default=prev_input.get(
-                            SERVER_COUNTRY_CODES_DEFAULT, vol.UNDEFINED
+                            CONF_ENTRY_AUTH_COUNTRY_CODE, SERVER_COUNTRY_CODES_DEFAULT
                         ),
                     ): vol.In(SERVER_COUNTRY_CODES),
                     vol.Optional(
@@ -269,7 +318,7 @@ class OptionsFlowHandler(OptionsFlow):
                 }
             )
             return self.async_show_form(
-                step_id="init", data_schema=config_scheme, errors=errors
+                step_id="auth", data_schema=config_scheme, errors=errors
             )
 
     async def async_step_option_get_token(self, user_input=None):

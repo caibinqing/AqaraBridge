@@ -7,6 +7,7 @@ from homeassistant.const import EVENT_HOMEASSISTANT_STOP
 from homeassistant.core import HomeAssistant
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.helpers import aiohttp_client
+from homeassistant.helpers import device_registry as dr
 
 from .core.aiot_manager import (
     AiotManager,
@@ -157,22 +158,29 @@ async def async_setup_entry(hass, entry):
 
     hass.data[DOMAIN][HASS_DATA_AUTH_ENTRY_ID] = entry
 
-    if len(manager.all_devices) == 0:
-        await manager.async_add_all_devices(entry)
-        await manager.async_forward_entry_setup(entry)
-    else:
-        await manager.async_add_all_devices(entry)
+    # 移除不再接入的设备及其实体；按选项判断，接口查询失败时不会误删
+    selected = entry.options.get(CONF_ENTRY_DEVICES)
+    if selected:
+        dev_reg = dr.async_get(hass)
+        for device in dr.async_entries_for_config_entry(dev_reg, entry.entry_id):
+            if not any(d == DOMAIN and i in selected for d, i in device.identifiers):
+                dev_reg.async_update_device(
+                    device.id, remove_config_entry_id=entry.entry_id
+                )
+
+    await manager.async_add_all_devices(entry)
+    await manager.async_forward_entry_setup(entry)
 
     return True
 
 
 async def async_unload_entry(hass, entry):
-    # if CONF_ENTRY_AUTH_ACCOUNT in entry.data:
-    #     hass.data[DOMAIN][HASS_DATA_AUTH_ENTRY_ID] = None
-    # else:
-    #     manager: AiotManager = hass.data[DOMAIN][HASS_DATA_AIOT_MANAGER]
-    #     await manager.async_unload_entry(entry)
-    return True
+    manager: AiotManager = hass.data[DOMAIN][HASS_DATA_AIOT_MANAGER]
+    unload_ok = await manager.async_unload_entry(entry)
+    if manager._msg_handler is not None:
+        await manager._msg_handler.async_stop()
+        manager._msg_handler = None
+    return unload_ok
 
 
 async def async_remove_entry(hass, entry):

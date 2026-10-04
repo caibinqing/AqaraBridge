@@ -41,7 +41,21 @@
     },
     "options": {
         "step": {
-            "inits": {
+            "init": {
+                "title": "Options",
+                "menu_options": {
+                    "select_devices": "Choose devices",
+                    "auth": "Re-authorize"
+                }
+            },
+            "select_devices": {
+                "data": {
+                    "field_selected_devices": "Devices"
+                },
+                "description": "Only supported devices are listed. Unselected devices are unsubscribed and removed from Home Assistant.",
+                "title": "Choose the devices"
+            },
+            "auth": {
                 "data": {
                     "field_country_code": "Cloud Server Country/Region",
                     "field_account": "Aqara Home Account (Cellular Number/ Email)",
@@ -63,7 +77,8 @@
         },
         "error": {
             "refresh_token_error": "Refresh Token invalid",
-            "auth_code_error": "SMS or Email Code invalid"
+            "auth_code_error": "SMS or Email Code invalid",
+            "no_device_selected": "Select at least one device."
         }
     }
 }
