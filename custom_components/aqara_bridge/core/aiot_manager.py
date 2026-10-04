@@ -17,7 +17,7 @@ from .aiot_mapping import (
     MK_HASS_NAME,
     AIOT_DEVICE_MAPPING,
 )
-from .const import DOMAIN, HASS_DATA_AIOT_MANAGER
+from .const import CONF_ENTRY_DEVICES, DOMAIN, HASS_DATA_AIOT_MANAGER
 from .utils import *
 
 _LOGGER = logging.getLogger(__name__)
@@ -486,7 +486,8 @@ class AiotManager:
                                 )
                             )
                     else:
-                        _LOGGER.info(
+                        # 未接入设备的推送同样消耗调用量，通常是之前遗留的订阅
+                        _LOGGER.warning(
                             "[msg_callback, not_in_devices_entities]{}, {}".format(
                                 ts_format_str_ms(x["time"], self._hass), x
                             )
@@ -525,10 +526,13 @@ class AiotManager:
         except Exception as _:
             _LOGGER.exception("[msg_callback, error]process_message_error.\n")
 
-    async def async_refresh_all_devices(self):
-        """获取Aiot所有设备"""
+    async def async_refresh_all_devices(self, dids: list[str] | None = None):
+        """获取Aiot所有设备，指定dids时只获取这些设备"""
         self._all_devices = {}
-        results = await self._session.async_query_all_devices_info()
+        if dids:
+            results = await self._session.async_query_device_info(dids=dids) or []
+        else:
+            results = await self._session.async_query_all_devices_info()
         for x in results:
             device = AiotDevice(**x)
             postions = await self._session.async_query_position_detail(
@@ -538,7 +542,10 @@ class AiotManager:
             self._all_devices.setdefault(x["did"], device)
 
     async def async_add_all_devices(self, config_entry: ConfigEntry):
-        await self.async_refresh_all_devices()  # 刷新一次所有设备列表
+        # 刷新一次设备列表
+        await self.async_refresh_all_devices(
+            config_entry.options.get(CONF_ENTRY_DEVICES)
+        )
         self._entries_devices.setdefault(config_entry.entry_id, [])
         self._config_entries[config_entry.entry_id] = config_entry
         for device in self.all_devices:
@@ -657,6 +664,19 @@ class AiotManager:
                     )
                     self._devices_entities[device.did].append(instance)
                     entities.append(instance)
+
+        # 订阅实体用到的资源，推送也计入开放平台调用量，所以只订阅需要的
+        for device in devices:
+            resource_ids = sorted(
+                {
+                    r
+                    for e in entities
+                    if e.device is device
+                    for r in e.supported_resources
+                }
+            )
+            if resource_ids:
+                await self._session.async_subscribe_resources(device.did, resource_ids)
 
         async_add_entities(entities, update_before_add=True)
 

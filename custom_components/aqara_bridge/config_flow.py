@@ -11,6 +11,7 @@ from homeassistant.config_entries import (
 from homeassistant.core import callback
 
 from . import init_hass_data, data_masking, gen_auth_entry
+from .core.aiot_manager import AiotDevice
 from .core.const import *
 
 _LOGGER = logging.getLogger(__name__)
@@ -33,6 +34,8 @@ class AqaraBridgeFlowHandler(ConfigFlow, domain=DOMAIN):
         self.key_id = None
         self._session = None
         self._device_manager = None
+        self._auth_entry = None
+        self._devices = None
 
     @staticmethod
     @callback
@@ -67,7 +70,7 @@ class AqaraBridgeFlowHandler(ConfigFlow, domain=DOMAIN):
             if refresh_token and refresh_token != "":
                 resp = await self._session.async_refresh_token(refresh_token)
                 if resp["code"] == 0:
-                    auth_entry = gen_auth_entry(
+                    self._auth_entry = gen_auth_entry(
                         self.app_id,
                         self.app_key,
                         self.key_id,
@@ -76,12 +79,7 @@ class AqaraBridgeFlowHandler(ConfigFlow, domain=DOMAIN):
                         self.country_code,
                         resp["result"],
                     )
-                    self.hass.async_create_task(
-                        self.hass.config_entries.flow.async_init(
-                            DOMAIN, context={"source": "get_token"}, data=auth_entry
-                        )
-                    )
-                    return self.async_abort(reason="complete")
+                    return await self.async_step_select_devices()
                 else:
                     errors["base"] = "refresh_token_error"
             else:
@@ -136,38 +134,57 @@ class AqaraBridgeFlowHandler(ConfigFlow, domain=DOMAIN):
 
     async def async_step_get_token(self, user_input=None):
         errors = {}
-        if user_input:
-            if CONF_FIELD_AUTH_CODE in user_input:
-                auth_code = user_input.get(CONF_FIELD_AUTH_CODE)
-                resp = await self._session.async_get_token(auth_code, self.account, 0)
-
-                if resp["code"] == 0:
-                    auth_entry = gen_auth_entry(
-                        self.app_id,
-                        self.app_key,
-                        self.key_id,
-                        self.account,
-                        self.account_type,
-                        self.country_code,
-                        resp["result"],
-                    )
-                    self.hass.async_create_task(
-                        self.hass.config_entries.flow.async_init(
-                            DOMAIN, context={"source": "get_token"}, data=auth_entry
-                        )
-                    )
-                else:
-                    errors["base"] = "get_auth_code_error"
-            elif CONF_ENTRY_AUTH_ACCOUNT in user_input:
-                return self.async_create_entry(
-                    title=data_masking(user_input[CONF_ENTRY_AUTH_ACCOUNT], 4),
-                    data=user_input,
+        if user_input and CONF_FIELD_AUTH_CODE in user_input:
+            auth_code = user_input.get(CONF_FIELD_AUTH_CODE)
+            resp = await self._session.async_get_token(auth_code, self.account, 0)
+            if resp["code"] == 0:
+                self._auth_entry = gen_auth_entry(
+                    self.app_id,
+                    self.app_key,
+                    self.key_id,
+                    self.account,
+                    self.account_type,
+                    self.country_code,
+                    resp["result"],
                 )
-
-            return self.async_abort(reason="complete")
+                return await self.async_step_select_devices()
+            errors["base"] = "get_auth_code_error"
 
         return self.async_show_form(
             step_id="get_token", data_schema=DEVICE_GET_TOKEN_CONFIG, errors=errors
+        )
+
+    async def async_step_select_devices(self, user_input=None):
+        """选择要接入的设备，未选中的设备不查询、不订阅"""
+        errors = {}
+        if user_input is not None:
+            selected = user_input.get(CONF_FIELD_SELECTED_DEVICES, [])
+            if selected:
+                return self.async_create_entry(
+                    title=data_masking(self._auth_entry[CONF_ENTRY_AUTH_ACCOUNT], 4),
+                    data=self._auth_entry,
+                    options={CONF_ENTRY_DEVICES: selected},
+                )
+            errors["base"] = "no_device_selected"
+
+        if self._devices is None:
+            results = await self._session.async_query_all_devices_info()
+            self._devices = {
+                x["did"]: f"{x.get('deviceName')} ({x.get('model')})"
+                for x in results
+                if AiotDevice(**x).is_supported
+            }
+
+        return self.async_show_form(
+            step_id="select_devices",
+            data_schema=vol.Schema(
+                {
+                    vol.Required(CONF_FIELD_SELECTED_DEVICES): cv.multi_select(
+                        self._devices
+                    )
+                }
+            ),
+            errors=errors,
         )
 
 

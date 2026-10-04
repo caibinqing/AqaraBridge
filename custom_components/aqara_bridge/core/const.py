@@ -32,6 +32,8 @@ CONF_ENTRY_AUTH_EXPIRES_TIME = "expires_datetime"
 CONF_ENTRY_AUTH_ACCESS_TOKEN = "access_token"
 CONF_ENTRY_AUTH_REFRESH_TOKEN = "refresh_token"
 CONF_ENTRY_AUTH_OPENID = "open_id"
+# CONFIG ENTRY OPTIONS，未设置时接入所有支持的设备
+CONF_ENTRY_DEVICES = "devices"
 
 # HASS DATA
 HASS_DATA_AUTH_ENTRY_ID = "auth_entry_id"

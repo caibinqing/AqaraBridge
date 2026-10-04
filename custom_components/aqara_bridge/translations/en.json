@@ -4,7 +4,10 @@
             "complete": "Config Finish."
         },
         "error": {
-            "get_auth_code_error": "Get SMS or Email Code Error."
+            "get_auth_code_error": "Get SMS or Email Code Error.",
+            "refresh_token_error": "Refresh Token invalid",
+            "auth_code_error": "Failed to request verification code",
+            "no_device_selected": "Select at least one device."
         },
         "flow_title": "{name}",
         "step": {
@@ -29,9 +32,9 @@
             },
             "select_devices": {
                 "data": {
-                    "field_selected_devices": "Select devices"
+                    "field_selected_devices": "Devices"
                 },
-                "description": "Choose the devices from list.",
+                "description": "Only supported devices are listed. Unselected devices are neither queried nor subscribed, so they cost no API quota.",
                 "title": "Choose the devices"
             }
         }

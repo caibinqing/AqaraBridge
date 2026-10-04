@@ -4,7 +4,10 @@
             "complete": "配置完成"
         },
         "error": {
-            "get_auth_code_error": "获取短信验证码异常，请稍后重试"
+            "get_auth_code_error": "获取短信验证码异常，请稍后重试",
+            "refresh_token_error": "刷新令牌错误，无法使用。",
+            "auth_code_error": "获取短信验证码失败，请检查账号与开放平台凭据。",
+            "no_device_selected": "请至少选择一个设备。"
         },
         "flow_title": "{name}",
         "step": {
@@ -26,6 +29,13 @@
                 },
                 "description": "请输入短信验证码。",
                 "title": "登录到Aqara云服务平台"
+            },
+            "select_devices": {
+                "data": {
+                    "field_selected_devices": "接入的设备"
+                },
+                "description": "只列出插件支持的设备。未选中的设备不会被查询或订阅，不消耗开放平台调用量。",
+                "title": "选择设备"
             }
         }
     },
