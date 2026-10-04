@@ -1,20 +1,19 @@
 import asyncio
 import json
 import logging
-
 from datetime import datetime
-from homeassistant.core import HomeAssistant
+
 from homeassistant.config_entries import ConfigEntry
+from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity import DeviceInfo, Entity
 
 from .aiot_cloud import AiotCloud
-
 from .aiot_mapping import (
-    MK_MAPPING_PARAMS,
-    MK_INIT_PARAMS,
-    MK_RESOURCES,
-    MK_HASS_NAME,
     AIOT_DEVICE_MAPPING,
+    MK_HASS_NAME,
+    MK_INIT_PARAMS,
+    MK_MAPPING_PARAMS,
+    MK_RESOURCES,
 )
 from .const import CONF_ENTRY_DEVICES, DOMAIN, HASS_DATA_AIOT_MANAGER
 from .utils import local_zone, ts_format_str_ms
@@ -23,7 +22,8 @@ _LOGGER = logging.getLogger(__name__)
 
 
 def __init_rocketmq():
-    import platform, os
+    import os
+    import platform
 
     machine = platform.machine()
     if machine in ("aarch64", "aarch64_be", "armv8b", "armv8l"):
@@ -213,9 +213,7 @@ class AiotEntityBase(Entity):
         """设置资源值"""
         res_id = self.get_res_id_by_name(res_name)
         _LOGGER.info(
-            "method:async_set_res_value, device:{}, res_id:{}, set_value:{}".format(
-                self.device.did, res_id, value
-            )
+            f"method:async_set_res_value, device:{self.device.did}, res_id:{res_id}, set_value:{value}"
         )
         return await self._aiot_manager.session.async_write_resource_device(
             self.device.did, res_id, value
@@ -272,9 +270,7 @@ class AiotEntityBase(Entity):
             current_value = getattr(self, tup_res[1])
             resp = None
             _LOGGER.info(
-                "[set_resource, {}, {}]{}:{}".format(
-                    self.device.did, self._attr_name, res_name, res_value
-                )
+                f"[set_resource, {self.device.did}, {self._attr_name}]{res_name}:{res_value}"
             )
             if current_value != attr_value:
                 res_value = self.convert_attr_to_res(res_name, attr_value)
@@ -298,9 +294,7 @@ class AiotEntityBase(Entity):
         current_value = getattr(self, tup_res[1], None)
 
         _LOGGER.info(
-            "[set_attr, {}, {}]{}, {}:{}".format(
-                self.device.did, self._attr_name, self.trigger_dt, res_name, res_value
-            )
+            f"[set_attr, {self.device.did}, {self._attr_name}]{self.trigger_dt}, {res_name}:{res_value}"
         )
         if current_value != attr_value:
             self.__setattr__(tup_res[1], attr_value)
@@ -310,7 +304,7 @@ class AiotEntityBase(Entity):
 
     async def async_device_connection(self, Open=False):
         """enable/disable device connection"""
-        _LOGGER.info("async_device_connection {}".format(self.device.did))
+        _LOGGER.info(f"async_device_connection {self.device.did}")
         if Open:
             return await self._aiot_manager.session.async_write_device_openconnect(
                 self.device.did
@@ -391,9 +385,7 @@ class AiotMessageHandler:
         await asyncio.to_thread(self._consumer.start)
         # self._consumer.start()
         _LOGGER.info(
-            "start_message_customer ---> server:{}, key_id:{}, app_key:{} <---".format(
-                self._server, self._app_id, self._app_key
-            )
+            f"start_message_customer ---> server:{self._server}, key_id:{self._app_id}, app_key:{self._app_key} <---"
         )
 
     def stop(self):
@@ -513,25 +505,7 @@ class AiotManager:
                         msg.get("eventType"), msg_time, msg["data"]
                     )
                 )
-                # 事件消息
-                if msg["eventType"] == "gateway_bind":  # 网关绑定
-                    pass
-                elif msg["eventType"] == "subdevice_bind":  # 子设备绑定
-                    pass
-                elif msg["eventType"] == "gateway_unbind":  # 网关解绑
-                    pass
-                elif msg["eventType"] == "unbind_sub_gw":  # 子设备解绑
-                    pass
-                elif msg["eventType"] == "gateway_online":  # 网关在线
-                    pass
-                elif msg["eventType"] == "gateway_offline":  # 网关离线
-                    pass
-                elif msg["eventType"] == "subdevice_online":  # 子设备在线
-                    pass
-                elif msg["eventType"] == "subdevice_offline":  # 子设备离线
-                    pass
-                else:  # 其他事件暂不处理
-                    pass
+                # 事件消息（网关/子设备的绑定、解绑、上下线等）暂不处理，只记录日志
             else:
                 _LOGGER.info(
                     "[msg_callback, {}]msg_time:{}, msg_data:{}".format(

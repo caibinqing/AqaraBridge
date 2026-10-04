@@ -1,15 +1,15 @@
 import logging
 
-from homeassistant.components.light import ColorMode, LightEntity
 import homeassistant.util.color as color_util
+from homeassistant.components.light import ColorMode, LightEntity
 
 from .core.aiot_manager import AiotManager, AiotToggleableEntityBase
 from .core.const import DOMAIN, HASS_DATA_AIOT_MANAGER
 from .core.utils import (
-    light_convert_unit32_to_xy,
-    light_convert_xy_to_uint32,
     light_convert_argb_to_rgb,
     light_convert_rgb_to_argb,
+    light_convert_unit32_to_xy,
+    light_convert_xy_to_uint32,
 )
 
 TYPE = "light"
@@ -86,15 +86,9 @@ class AiotLightEntity(AiotToggleableEntityBase, LightEntity):
         elif res_name == "color" and self._attr_color_mode == ColorMode.HS:
             # attr_value：hs颜色
             rgb_color = color_util.color_hs_to_RGB(*attr_value)
-            return int(
-                "{}{}{}{}".format(
-                    hex(int(self.brightness * 100 / 255))[2:4].zfill(2),
-                    hex(rgb_color[0])[2:4].zfill(2),
-                    hex(rgb_color[1])[2:4].zfill(2),
-                    hex(rgb_color[2])[2:4].zfill(2),
-                ),
-                16,
-            )
+            brightness = int(self.brightness * 100 / 255)
+            r, g, b = rgb_color
+            return int(f"{brightness:02x}{r:02x}{g:02x}{b:02x}", 16)
         elif res_name == "color" and self._attr_color_mode == ColorMode.XY:
             return light_convert_xy_to_uint32(attr_value[0], attr_value[1])
         elif res_name == "color" and self._attr_color_mode == ColorMode.RGB:

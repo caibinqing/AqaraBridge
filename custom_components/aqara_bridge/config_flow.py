@@ -1,16 +1,16 @@
 import logging
-import voluptuous as vol
 
 import homeassistant.helpers.config_validation as cv
+import voluptuous as vol
 from homeassistant.config_entries import (
+    ConfigEntry,
     ConfigFlow,
     OptionsFlow,
-    ConfigEntry,
 )
 from homeassistant.core import callback
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
-from . import init_hass_data, data_masking, gen_auth_entry
+from . import data_masking, gen_auth_entry, init_hass_data
 from .core.aiot_cloud import AiotCloud
 from .core.aiot_manager import AiotDevice
 from .core.const import (
@@ -34,7 +34,6 @@ from .core.const import (
     DOMAIN,
     HASS_DATA_AIOT_MANAGER,
     HASS_DATA_AIOTCLOUD,
-    HASS_DATA_AUTH_ENTRY_ID,
     SERVER_COUNTRY_CODES,
     SERVER_COUNTRY_CODES_DEFAULT,
 )
@@ -92,7 +91,6 @@ class AqaraBridgeFlowHandler(ConfigFlow, domain=DOMAIN):
         """Handle a flow initialized by the user."""
         init_hass_data(self.hass)
         self._device_manager = self.hass.data[DOMAIN][HASS_DATA_AIOT_MANAGER]
-        auth_entry_id = self.hass.data[DOMAIN][HASS_DATA_AUTH_ENTRY_ID]
         self._session = self.hass.data[DOMAIN][HASS_DATA_AIOTCLOUD]
         return await self.async_step_get_auth_code()
 

@@ -1,9 +1,9 @@
 import hashlib
 import json
+import logging
 import random
 import string
 import time
-import logging
 
 from aiohttp import ClientSession
 
@@ -20,7 +20,7 @@ API_DOMAIN = {
 
 def get_random_string(length: int):
     seq = string.ascii_uppercase + string.digits
-    return "".join((random.choice(seq) for _ in range(length)))
+    return "".join(random.choice(seq) for _ in range(length))
 
 
 # 生成Headers中的sign
@@ -140,11 +140,11 @@ class AiotCloud:
                     )
                     if jo["code"] == 108:
                         # 令牌过期或异常，正在尝试自动刷新
-                        _LOGGER.warning(f"Aiot token expired, trying to auto refresh！")
+                        _LOGGER.warning("Aiot token expired, trying to auto refresh！")
                         new_jo = await self.async_refresh_token(self.refresh_token)
                         if new_jo["code"] == 0:
                             # Aiot令牌更新成功！
-                            _LOGGER.info(f"Aiot token refresh successfully！")
+                            _LOGGER.info("Aiot token refresh successfully！")
                             return await self._async_invoke_aqara_cloud_api(
                                 intent, only_result, list_data, **kwargs
                             )

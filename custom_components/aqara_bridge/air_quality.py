@@ -1,12 +1,10 @@
 """Support for Aqara Air Quality Monitor."""
 from homeassistant.components.air_quality import AirQualityEntity
-from homeassistant.const import (
-    ATTR_TEMPERATURE
-)
+from homeassistant.const import ATTR_TEMPERATURE
 
 from .core.aiot_manager import (
-    AiotManager,
     AiotEntityBase,
+    AiotManager,
 )
 from .core.const import (
     ATTR_CO2E,
@@ -14,7 +12,7 @@ from .core.const import (
     ATTR_TVOC,
     DOMAIN,
     HASS_DATA_AIOT_MANAGER,
-    PROP_TO_ATTR_BASE
+    PROP_TO_ATTR_BASE,
 )
 
 TYPE = "air_quality"

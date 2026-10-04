@@ -98,7 +98,7 @@ class AiotMotionBinarySensor(AiotBinarySensorEntity, BinarySensorEntity):
         self.hass.bus.fire("xiaomi_aqara.motion", {"entity_id": self.entity_id})
 
     def convert_res_to_attr(self, res_name, res_value):
-        log_info = "[conver_attr, {}, {}]".format(self.device.did, self._attr_name)
+        log_info = f"[conver_attr, {self.device.did}, {self._attr_name}]"
         if res_name in ["firmware_version", "zigbee_lqi", "voltage"]:
             return super().convert_res_to_attr(res_name, res_value)
 
@@ -115,9 +115,7 @@ class AiotMotionBinarySensor(AiotBinarySensorEntity, BinarySensorEntity):
 
         if time_now - self._last_on < 1:
             _LOGGER.warning(
-                "{}false, time_now:{} < last_on:{}".format(
-                    log_info, time_now, self._last_on
-                )
+                f"{log_info}false, time_now:{time_now} < last_on:{self._last_on}"
             )
             return
         self._attr_is_on = bool(res_value)
@@ -126,9 +124,7 @@ class AiotMotionBinarySensor(AiotBinarySensorEntity, BinarySensorEntity):
         if time_now - self.trigger_time > self.detect_time:
             self._attr_is_on = False
             _LOGGER.info(
-                "{}false, time_now:{} - trigger_time:{} > detect_time:{}".format(
-                    log_info, time_now, self.trigger_time, self.detect_time
-                )
+                f"{log_info}false, time_now:{time_now} - trigger_time:{self.trigger_time} > detect_time:{self.detect_time}"
             )
             return False
 
@@ -154,7 +150,7 @@ class AiotMotionBinarySensor(AiotBinarySensorEntity, BinarySensorEntity):
             if delay < 0 and time_now + delay < self._last_off:
                 delay *= 2
             self.hass.add_job(self._start_no_motion_timer, delay)
-        _LOGGER.info("{}conver_value:{}".format(log_info, bool(res_value)))
+        _LOGGER.info(f"{log_info}conver_value:{bool(res_value)}")
         return bool(res_value)
 
 

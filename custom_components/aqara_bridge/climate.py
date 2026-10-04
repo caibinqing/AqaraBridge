@@ -1,5 +1,6 @@
 import logging
 import re
+
 from homeassistant.components.climate import (
     FAN_AUTO,
     FAN_HIGH,
@@ -14,10 +15,9 @@ from homeassistant.components.climate import (
 )
 
 from .core.aiot_manager import (
-    AiotManager,
     AiotEntityBase,
+    AiotManager,
 )
-
 from .core.const import DOMAIN, HASS_DATA_AIOT_MANAGER
 
 TYPE = "climate"
@@ -604,7 +604,7 @@ class AiotACPartnerP3Entity(AiotEntityBase, ClimateEntity):
             pattern = r"^P(\d+)_M(\d+)_T(\d+)_S(\d+)_D(\d+)(?:_L(\d+))?$"
             match = re.fullmatch(pattern, value)
             if not match:
-                _LOGGER.error(f"Invalid 8.0.2116(P3) format.")
+                _LOGGER.error("Invalid 8.0.2116(P3) format.")
                 return
             # 提取参数（注意group6可能为None）
             power = int(match.group(1))  # P值
@@ -655,7 +655,6 @@ class AiotACPartnerP3Entity(AiotEntityBase, ClimateEntity):
         fan = P3_FAN_ATTR_RES_MAPPING.get(self._attr_fan_mode, "2")
 
         swing = 0 if self._attr_swing_mode == SWING_ON else 1
-        light = None  # Assuming light is not used, or you can set it as needed
 
         if attr == "hvac_mode":
             old_mode = self._attr_hvac_mode

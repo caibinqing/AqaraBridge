@@ -1,16 +1,17 @@
 """ Aqara Bridge remote """
 import asyncio
 import time
+
 from homeassistant.components import persistent_notification
 from homeassistant.components.remote import (
     ATTR_DELAY_SECS,
     ATTR_NUM_REPEATS,
     DEFAULT_DELAY_SECS,
-    RemoteEntity
+    RemoteEntity,
 )
 from homeassistant.const import CONF_TIMEOUT
 
-from .core.aiot_manager import AiotManager, AiotEntityBase
+from .core.aiot_manager import AiotEntityBase, AiotManager
 from .core.const import DOMAIN, HASS_DATA_AIOT_MANAGER
 
 TYPE = "remote"

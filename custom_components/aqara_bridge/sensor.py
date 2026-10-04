@@ -1,9 +1,10 @@
-from homeassistant.components.sensor import SensorEntity
 import logging
 
+from homeassistant.components.sensor import SensorEntity
+
 from .core.aiot_manager import (
-    AiotManager,
     AiotEntityBase,
+    AiotManager,
 )
 from .core.const import (
     DOMAIN,

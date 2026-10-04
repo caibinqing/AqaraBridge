@@ -1,15 +1,15 @@
 import datetime
-import re
 import logging
+import re
 
+from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import EVENT_HOMEASSISTANT_STOP
 from homeassistant.core import HomeAssistant
-from homeassistant.config_entries import ConfigEntry
 from homeassistant.helpers import aiohttp_client
 from homeassistant.helpers import device_registry as dr
 
-from .core.aiot_manager import AiotManager
 from .core.aiot_cloud import AiotCloud
+from .core.aiot_manager import AiotManager
 from .core.const import (
     CONF_ENTRY_APP_ID,
     CONF_ENTRY_APP_KEY,
@@ -28,7 +28,6 @@ from .core.const import (
     HASS_DATA_AIOTCLOUD,
     HASS_DATA_AUTH_ENTRY_ID,
 )
-
 
 _LOGGER = logging.getLogger(__name__)
 

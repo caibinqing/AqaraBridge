@@ -1,9 +1,10 @@
 import logging
+
 from homeassistant.components.cover import CoverEntity
 
 from .core.aiot_manager import (
-    AiotManager,
     AiotEntityBase,
+    AiotManager,
 )
 from .core.const import DOMAIN, HASS_DATA_AIOT_MANAGER
 

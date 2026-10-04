@@ -1,20 +1,21 @@
+import logging
+
 from homeassistant.components.event import EventEntity
 
 from .core.aiot_manager import (
-    AiotManager,
     AiotEntityBase,
+    AiotManager,
 )
 from .core.const import (
     BUTTON,
     DOMAIN,
-    HASS_DATA_AIOT_MANAGER,
     GESTURE_MAPPING,
-    PET_MAPPING,
+    HASS_DATA_AIOT_MANAGER,
     HUMAN_MAPPING,
     MOVING_MAPPING,
+    PET_MAPPING,
     SOUND_MAPPING,
 )
-import logging
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -59,7 +60,7 @@ class AiotEventEntity(AiotEntityBase, EventEntity):
             if trigger is None:
                 # 不在event_types中的值会让_trigger_event抛ValueError
                 _LOGGER.info(
-                    "[event, {}]unmapped value: {}".format(self.device.did, res_value)
+                    f"[event, {self.device.did}]unmapped value: {res_value}"
                 )
             else:
                 self._trigger_event(trigger)
