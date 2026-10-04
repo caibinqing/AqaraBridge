@@ -3,7 +3,6 @@ import voluptuous as vol
 
 import homeassistant.helpers.config_validation as cv
 from homeassistant.config_entries import (
-    CONN_CLASS_LOCAL_PUSH,
     ConfigFlow,
     OptionsFlow,
     ConfigEntry,

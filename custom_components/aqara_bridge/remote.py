@@ -1,9 +1,7 @@
 """ Aqara Bridge remote """
 import asyncio
 import time
-import voluptuous as vol
 from datetime import datetime
-from homeassistant.helpers import config_validation as cv
 from homeassistant.components.remote import (
     ATTR_DELAY_SECS,
     ATTR_NUM_REPEATS,

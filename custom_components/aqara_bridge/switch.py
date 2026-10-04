@@ -1,7 +1,7 @@
 from homeassistant.components.switch import SwitchEntity
 
 from .core.aiot_manager import AiotManager, AiotToggleableEntityBase
-from .core.const import DOMAIN, HASS_DATA_AIOT_MANAGER, PROP_TO_ATTR_BASE
+from .core.const import DOMAIN, HASS_DATA_AIOT_MANAGER
 
 TYPE = "switch"
 

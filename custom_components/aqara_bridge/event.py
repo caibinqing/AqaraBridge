@@ -6,7 +6,6 @@ from .core.aiot_manager import (
 )
 from .core.const import (
     BUTTON,
-    CUBE,
     DOMAIN,
     HASS_DATA_AIOT_MANAGER,
     GESTURE_MAPPING,

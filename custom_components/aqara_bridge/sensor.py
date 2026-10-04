@@ -1,7 +1,4 @@
-import time
-from datetime import datetime
 from homeassistant.components.sensor import SensorEntity
-from .core.utils import local_zone
 import logging
 
 from .core.aiot_manager import (

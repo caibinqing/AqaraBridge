@@ -1,5 +1,4 @@
 import datetime
-from email import message
 import re
 import logging
 
@@ -9,10 +8,7 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.helpers import aiohttp_client
 from homeassistant.helpers import device_registry as dr
 
-from .core.aiot_manager import (
-    AiotManager,
-    AiotDevice,
-)
+from .core.aiot_manager import AiotManager
 from .core.aiot_cloud import AiotCloud
 from .core.const import *
 
