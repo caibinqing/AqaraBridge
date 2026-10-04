@@ -3,7 +3,6 @@ import json
 import logging
 import traceback
 
-from typing import Optional, Union
 from datetime import datetime
 from homeassistant.core import HomeAssistant
 from homeassistant.config_entries import ConfigEntry
@@ -407,22 +406,19 @@ class AiotManager:
     _session: AiotCloud = None
 
     # 所有设备
-    _all_devices: Optional[Union[str, AiotDevice]] = {}
+    _all_devices: dict[str, AiotDevice] = {}
 
     # 所有在HA中管理的设备
-    _managed_devices: Optional[Union[str, AiotDevice]] = {}
+    _managed_devices: dict[str, AiotDevice] = {}
 
     # 配置对象和设备的对应关系，1：N
-    _entries_devices: Optional[Union[str, list]] = {}
+    _entries_devices: dict[str, list] = {}
 
     # 所有配置对象
-    _config_entries: Optional[Union[str, ConfigEntry]] = {}
+    _config_entries: dict[str, ConfigEntry] = {}
 
     # 设备和实体的对应关系，1：N
-    _devices_entities: Optional[Union[str, list]] = {}
-
-    # 插件不支持的设备列表
-    _unsupported_devices: Optional[list] = []
+    _devices_entities: dict[str, list] = {}
 
     def __init__(self, hass: HomeAssistant, session: AiotCloud):
         self._hass = hass
@@ -436,27 +432,23 @@ class AiotManager:
         return self._session
 
     @property
-    def all_devices(self) -> Optional[list]:
+    def all_devices(self):
         """获取Aiot Cloud上的所有设备"""
         return self._all_devices.values()
 
     @property
-    def unmanaged_gateways(self) -> Optional[list]:
+    def unmanaged_gateways(self) -> list[AiotDevice]:
         """获取HA为管理的网关设备"""
-        gateways = []
-        [
-            gateways.append(x)
+        return [
+            x
             for x in self._all_devices.values()
             if x.model_type in (1, 2) and x.did not in self._managed_devices.keys()
         ]
-        return gateways
 
     @property
-    def unsupported_devices(self) -> Optional[list]:
+    def unsupported_devices(self) -> list[AiotDevice]:
         """插件不支持的设备列表"""
-        devices = []
-        [devices.append(x) for x in self._all_devices.values() if not x.is_supported]
-        return devices
+        return [x for x in self._all_devices.values() if not x.is_supported]
 
     async def start_msg_hanlder(self, app_id, app_key, key_id):
         self._msg_handler = AiotMessageHandler(

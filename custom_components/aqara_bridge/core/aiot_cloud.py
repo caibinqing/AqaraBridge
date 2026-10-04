@@ -46,46 +46,49 @@ class AiotCloud:
     refresh_token = None
     update_token_event_callback = None
 
+    country: str
+    api_url: str
+
     def __init__(self, session: ClientSession):
-        self.app_id = None
-        self.key_id = None
-        self.app_key = None
+        self.app_id: str | None = None
+        self.key_id: str | None = None
+        self.app_key: str | None = None
         self.session = session
-        self.options = None
+        self.options: dict | None = None
         self.set_country("CN")
 
-    def set_options(self, options):
+    def set_options(self, options: dict) -> None:
         """set hass options"""
         self.options = options
 
-    def get_options(self):
+    def get_options(self) -> dict | None:
         """get hass options"""
         return self.options
 
-    def set_country(self, country: str):
+    def set_country(self, country: str) -> None:
         """set aiot country"""
         self.country = country
         self.api_url = f"https://{API_DOMAIN[country]}/v3.0/open/api"
 
-    def get_app_id(self):
+    def get_app_id(self) -> str | None:
         return self.app_id
 
-    def get_key_id(self):
+    def get_key_id(self) -> str | None:
         return self.key_id
 
-    def get_app_key(self):
+    def get_app_key(self) -> str | None:
         return self.app_key
 
-    def set_app_id(self, app_id: str):
+    def set_app_id(self, app_id: str) -> None:
         self.app_id = app_id
 
-    def set_key_id(self, key_id: str):
+    def set_key_id(self, key_id: str) -> None:
         self.key_id = key_id
 
-    def set_app_key(self, app_key: str):
+    def set_app_key(self, app_key: str) -> None:
         self.app_key = app_key
 
-    def _get_request_headers(self, need_access_token=True):
+    def _get_request_headers(self) -> dict:
         """生成Headers"""
         nonce = get_random_string(16)
         timestamp = str(int(round(time.time() * 1000)))
@@ -169,12 +172,12 @@ class AiotCloud:
             accessTokenValidity=access_token_validity,
         )
 
-    async def async_get_token(self, authCode: str, account: str, account_type: int):
+    async def async_get_token(self, auth_code: str, account: str, account_type: int):
         """获取访问令牌"""
         jo = await self._async_invoke_aqara_cloud_api(
             intent="config.auth.getToken",
             only_result=False,
-            authCode=authCode,
+            authCode=auth_code,
             account=account,
             accountType=account_type,
         )
@@ -267,20 +270,20 @@ class AiotCloud:
         self,
         subject_id: str,
         resource_ids: list,
-        startTime=None,
-        endTime=None,
+        start_time=None,
+        end_time=None,
         page_size: int = 30,
     ):
-        if endTime is None and startTime is None:
-            endTime = int(time.time() * 1000)
-            startTime = int(endTime - (7 * 24 * 3600 * 1000))
+        if end_time is None and start_time is None:
+            end_time = int(time.time() * 1000)
+            start_time = int(end_time - (7 * 24 * 3600 * 1000))
         """查询资源历史信息"""
         return await self._async_invoke_aqara_cloud_api(
             intent="fetch.resource.history",
             subjectId=subject_id,
             resourceIds=resource_ids,
-            startTime=startTime,
-            endTime=endTime,
+            startTime=start_time,
+            endTime=end_time,
             size=page_size,
         )
 
@@ -315,7 +318,7 @@ class AiotCloud:
         )
 
     async def async_subscribe_resources(
-        self, subject_id: str, resource_ids: list, attach=None
+        self, subject_id: str, resource_ids: list[str], attach=None
     ):
         """订阅资源"""
         return await self._async_invoke_aqara_cloud_api(
