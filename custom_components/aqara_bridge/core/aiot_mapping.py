@@ -20,11 +20,10 @@ from homeassistant.components.event import EventDeviceClass
 from homeassistant.components.light import ColorMode, LightEntityFeature
 from homeassistant.components.sensor import SensorDeviceClass, SensorStateClass
 from homeassistant.const import (
-    CONCENTRATION_PARTS_PER_BILLION,
     LIGHT_LUX,
-    PERCENTAGE,
     UnitOfEnergy,
     UnitOfPower,
+    UnitOfRatio,
     UnitOfTemperature,
 )
 
@@ -1518,7 +1517,7 @@ AIOT_DEVICE_MAPPING = [
                         MK_HASS_NAME: "battery",
                         "device_class": SensorDeviceClass.BATTERY,
                         "state_class": SensorStateClass.MEASUREMENT,
-                        "unit_of_measurement": PERCENTAGE,
+                        "unit_of_measurement": UnitOfRatio.PERCENTAGE,
                     },
                     MK_RESOURCES: {"battery": ("8.0.2001", "_attr_native_value")},
                 }
@@ -1584,7 +1583,7 @@ AIOT_DEVICE_MAPPING = [
                         MK_HASS_NAME: "battery",
                         "device_class": SensorDeviceClass.BATTERY,
                         "state_class": SensorStateClass.MEASUREMENT,
-                        "unit_of_measurement": PERCENTAGE,
+                        "unit_of_measurement": UnitOfRatio.PERCENTAGE,
                     },
                     MK_RESOURCES: {"battery": ("8.0.2001", "_attr_native_value")},
                 }
@@ -1941,7 +1940,7 @@ AIOT_DEVICE_MAPPING = [
                         MK_HASS_NAME: "humidity",
                         "device_class": SensorDeviceClass.HUMIDITY,
                         "state_class": SensorStateClass.MEASUREMENT,
-                        "unit_of_measurement": PERCENTAGE,
+                        "unit_of_measurement": UnitOfRatio.PERCENTAGE,
                     },
                     MK_RESOURCES: {"humidity": ("0.2.85", "_attr_native_value")},
                 }
@@ -1970,7 +1969,7 @@ AIOT_DEVICE_MAPPING = [
                         MK_HASS_NAME: "humidity",
                         "device_class": SensorDeviceClass.HUMIDITY,
                         "state_class": SensorStateClass.MEASUREMENT,
-                        "unit_of_measurement": PERCENTAGE,
+                        "unit_of_measurement": UnitOfRatio.PERCENTAGE,
                     },
                     MK_RESOURCES: {"humidity": ("0.2.85", "_attr_native_value")},
                 }
@@ -1981,7 +1980,7 @@ AIOT_DEVICE_MAPPING = [
                         MK_HASS_NAME: "TVOC",
                         "device_class": SensorDeviceClass.VOLATILE_ORGANIC_COMPOUNDS_PARTS,
                         "state_class": SensorStateClass.MEASUREMENT,
-                        "unit_of_measurement": CONCENTRATION_PARTS_PER_BILLION,
+                        "unit_of_measurement": UnitOfRatio.PARTS_PER_BILLION,
                     },
                     MK_RESOURCES: {
                         "TVOC": (
@@ -2015,7 +2014,7 @@ AIOT_DEVICE_MAPPING = [
                         MK_HASS_NAME: "battery",
                         "device_class": SensorDeviceClass.BATTERY,
                         "state_class": SensorStateClass.MEASUREMENT,
-                        "unit_of_measurement": PERCENTAGE,
+                        "unit_of_measurement": UnitOfRatio.PERCENTAGE,
                     },
                     MK_RESOURCES: {"battery": ("8.0.2001", "_attr_native_value")},
                 }
