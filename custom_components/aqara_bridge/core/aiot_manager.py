@@ -135,7 +135,7 @@ class AiotEntityBase(Entity):
         )
 
         self._attr_unique_id = f"{DOMAIN}.{type_name}_{manufacturer.lower()}_{device.did.split('.', 1)[1][-6:]}_{kwargs.get('hass_attr_name')}"
-        self.entity_id = f"{DOMAIN}.{manufacturer.lower()}_{device.did.split('.', 1)[1][-6:]}_{kwargs.get('hass_attr_name')}"
+        self.entity_id = f"{type_name}.{manufacturer.lower()}_{device.did.split('.', 1)[1][-6:]}_{kwargs.get('hass_attr_name')}"
         if channel:
             self._attr_unique_id = f"{self._attr_unique_id}_{channel}"
             self.entity_id = f"{self.entity_id}_{channel}"
