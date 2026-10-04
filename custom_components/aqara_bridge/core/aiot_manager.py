@@ -422,29 +422,22 @@ class AiotMessageHandler:
 
 
 class AiotManager:
-    # Aiot会话
-    _session: AiotCloud = None
-
-    # 所有设备
-    _all_devices: dict[str, AiotDevice] = {}
-
-    # 所有在HA中管理的设备
-    _managed_devices: dict[str, AiotDevice] = {}
-
-    # 配置对象和设备的对应关系，1：N
-    _entries_devices: dict[str, list] = {}
-
-    # 所有配置对象
-    _config_entries: dict[str, ConfigEntry] = {}
-
-    # 设备和实体的对应关系，1：N
-    _devices_entities: dict[str, list] = {}
-
     def __init__(self, hass: HomeAssistant, session: AiotCloud):
         self._hass = hass
+        # Aiot会话
         self._session = session
         self._msg_handler = None
         self._options = None
+        # 所有设备
+        self._all_devices: dict[str, AiotDevice] = {}
+        # 所有在HA中管理的设备
+        self._managed_devices: dict[str, AiotDevice] = {}
+        # 配置对象和设备的对应关系，1：N
+        self._entries_devices: dict[str, list] = {}
+        # 所有配置对象
+        self._config_entries: dict[str, ConfigEntry] = {}
+        # 设备和实体的对应关系，1：N
+        self._devices_entities: dict[str, list] = {}
         # 配置对象已加载的平台，卸载时使用
         self._entries_platforms: dict[str, set[str]] = {}
 
