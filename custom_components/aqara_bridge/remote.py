@@ -1,7 +1,7 @@
 """ Aqara Bridge remote """
 import asyncio
 import time
-from datetime import datetime
+from homeassistant.components import persistent_notification
 from homeassistant.components.remote import (
     ATTR_DELAY_SECS,
     ATTR_NUM_REPEATS,
@@ -84,30 +84,28 @@ class AiotRemoteIrda(AiotEntityBase, RemoteEntity):
 
         for _ in range(num_repeats):
             await self.async_set_resource("irda", command)
-            time.sleep(delay)
+            await asyncio.sleep(delay)
 
     async def async_learn_command(self, **kwargs):
         """Handle a learn command."""
         timeout = kwargs.get(CONF_TIMEOUT, 10)
 
         resp = await self.async_infrared_learn(True, 20)
-        if isinstance(resp, dict):
-            keyid = resp['keyId']
+        if not isinstance(resp, dict):
+            return
+        keyid = resp["keyId"]
 
-            start_time = datetime.utcnow()
-            while (datetime.utcnow() - start_time) < datetime.timedelta(seconds=timeout):
-                message = await self.hass.async_add_executor_job(
-                    self.async_received_learnresult, keyid)
-                # _LOGGER.info("Message received from device: '%s'", message)
+        deadline = time.monotonic() + timeout
+        while time.monotonic() < deadline:
+            message = await self.async_received_learnresult(keyid)
+            if isinstance(message, dict) and message.get("ircode"):
+                persistent_notification.async_create(
+                    self.hass,
+                    f"Received command is: {message['ircode']}",
+                    title="Aqara Remote",
+                )
+                return
+            await asyncio.sleep(1)
 
-                if isinstance(message, dict):
-                    log_msg = "Received command is: {}".format(message['ircode'])
-                    self.hass.components.persistent_notification.async_create(
-                        log_msg, title="Aqara Remote"
-                    )
-                    return
-
-                if message is None:
-                    await self.async_infrared_learn(False)
-
-                await asyncio.sleep(1)
+        # 超时仍未学到，关闭设备的学习模式
+        await self.async_infrared_learn(False)
