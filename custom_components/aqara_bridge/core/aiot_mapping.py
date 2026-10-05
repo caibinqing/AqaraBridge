@@ -207,6 +207,18 @@ AIOT_DEVICE_MAPPING = [
                     MK_RESOURCES: {"event": ("13.12.85", "_attr_trigger")},
                 }
             },
+            {
+                "event": {
+                    MK_INIT_PARAMS: {
+                        MK_HASS_NAME: "face",
+                        "entity_name": "人脸识别",
+                    },
+                    MK_RESOURCES: {
+                        "detect_face_event": ("13.95.85", "_attr_trigger"),
+                        "detect_stranger_face_event": ("13.108.85", "_attr_trigger"),
+                    },
+                }
+            },
         ],
     },
     ################################墙壁开关#########################################

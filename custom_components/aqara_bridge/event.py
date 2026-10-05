@@ -30,6 +30,7 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
         "default": AiotEventEntity,
         "button": AiotButtonEntity,
         "camera": AiotCameraEntity,
+        "face": AiotFaceEventEntity,
     }
     await manager.async_add_entities(
         config_entry, TYPE, cls_entities, async_add_entities
@@ -87,6 +88,37 @@ class AiotButtonEntity(AiotEntityBase, EventEntity):
         if res_name == "button" and res_value not in (0, ""):
             trigger = BUTTON.get(res_value, "unknown")
             self._trigger_event(trigger)
+            self.schedule_update_ha_state()
+        return super().convert_res_to_attr(res_name, res_value)
+
+
+class AiotFaceEventEntity(AiotEntityBase, EventEntity):
+    """人脸识别：熟人与陌生人合并为一个实体，家庭成员ID放在事件属性 member_id 中
+
+    家庭成员ID是动态的，不能作为 event_types，否则遇到未预设的ID会抛 ValueError。
+    """
+
+    _attr_event_types = ["known", "stranger"]
+    _attr_icon = "mdi:face-recognition"
+
+    def __init__(self, hass, device, res_params, channel=None, **kwargs):
+        AiotEntityBase.__init__(self, hass, device, res_params, TYPE, channel, **kwargs)
+        # 基类会用云端资源名覆盖名称，两个资源时只剩后一个，这里恢复
+        if kwargs.get("entity_name"):
+            self._attr_name = kwargs["entity_name"]
+        self._extra_state_attributes.extend(["trigger_time", "trigger_dt"])
+
+    async def async_update(self):
+        # 事件只来自消息推送；初始查询会拿到上一次的值，重启时误触发一次事件
+        return
+
+    def convert_res_to_attr(self, res_name, res_value):
+        if res_name == "detect_face_event" and res_value not in (0, "", "0"):
+            self._trigger_event("known", {"member_id": res_value})
+            self.schedule_update_ha_state()
+        elif res_name == "detect_stranger_face_event":
+            # 陌生人事件的值固定为0
+            self._trigger_event("stranger")
             self.schedule_update_ha_state()
         return super().convert_res_to_attr(res_name, res_value)
 
